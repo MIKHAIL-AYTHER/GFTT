@@ -4,9 +4,11 @@ from PyQt5.QtWidgets import (
         QPushButton, QLabel, QFileDialog)
 
 from qss import QSS
-import OS
+import os
 
-
+from PyQt5.QtCore import Qt # потрібна константа Qt.KeepAspectRatio для зміни розмірів із збереженням пропорцій
+from PyQt5.QtGui import QPixmap # оптимізована для показу на екрані картинка
+from PIL import Image
 
 app = QApplication([])
 win = QWidget()
@@ -49,27 +51,77 @@ win.setLayout(row)
 
 
 win.show()
+workdir = ""
+def filter(files, extensions):
+   result = []
+   for filename in files:
+       for ext in extensions:
+           if filename.endswith(ext):
+               result.append(filename)
+   return result
 
-def fillter(files, extensions):
-        result = []
-        for filename in files:
-                for ext in extensions:
-                        if filename.endswhith(ext):
-                                result.append(filename)
-                    return result
 def chooseWorkdir():
-        global Workdir
-        workdir = QFileDialog getExistingDirectory()
+        global workdir
+        workdir = QFileDialog.getExistingDirectory()
 
 def showFilenamesList():
-        extensions = [".Jpg","Jpeg",",png",".gif",".bmp"]
+        extensions = [".jpg",".jpeg", ".png", ".gif", ".bmp"]
         chooseWorkdir()
-        Filenames = filter(os.listdir(workdir), extensions)
-        lw_filter.clear()
-        for filename infilenames:
-                lw_files.additem(filename)
+        filenames = filter(os.listdir(workdir), extensions)
+        lw_files.clear()
+        for filename in filenames:
+                lw_files.addItem(filename)
+
+
+
+class ImageProcessor:
+        def __init__(self):
+                self.image = None
+                self.dir = None
+                self.filename = None
+                self.save_dir = "Modfile/"
+
+        def loadImage(self, dir, filename):
+                selfdir = dir
+                self.filename = filename
+                image_path = os.path.join(dir, filename)
+                self.image.save(image_path)
+
+        def showImage(self, path):
+            lb_image.hide()
+            pixmapimage = QPixmap(path)
+            w, h= lb_image.width(), lb_image.height()
+            pixmapimage = pixmapimage.scaled(w, h, Qt.KeepAspectRatio)
+            lb_image.setPixmap(pixmapimage)
+            lb_image.show()
+            
+        def saveImage(self):
+                path = os.path.join(self.dir, self.save_dir)
+                if not (os.path.exists(path) or os.path.isdir(path)):
+                        os.mkdir(path)
+                self.image_path = os.path.join(path,self.filename)
+                self.image.save(image_path)
+
+        def do_bw(self):
+                self.image = self.image.convert("L")
+                self.saveImage()
+                image_path = os.path.join(self.dir,self.save_dir, self.filename)
+                self.showImage(image_path)
+
+def showChosenImage():
+        if lw_files.currenRow() >= 0:
+                filename = lw_files.currentItem().text()
+                workimage.loadImage(workdir, filename)
+                image_path = os.path.join(workimage.dir, workimage.filename)
+                workimage.showImage(image_path)
+
 
 btn_dir.clicked.connect(showFilenamesList())
+workimage = ImageProcessor()
+
+lw_files.currentRowChanged.connect(showChosemImage)
+btn_bw.cliked.connect(workimage.do_bw)
+
 
 app.exec()
 
